@@ -1,25 +1,171 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: 'Reproducible Research: Peer Assessment 1'
+author: "Tiago Sousa"
+date: "2023-03-19"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Reproducible Research: Peer Assessment 1
 
-## Loading and preprocessing the data
+## Needed library
+Before we start we need to load dplyr and ggplot2 so we can plot and group our data.
+```{r, results=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+```
 
+## Setting english time
+I needed to make set local time in English because my main language is Portuguese.
+```{r, results=FALSE}
+Sys.setlocale("LC_TIME", "English")
+```
 
+## Loading data processing
+1. After we download and unzip the data we need to load the data.
+```{r}
+data <- read.csv("activity.csv")
+```
+
+2. We need to convert the date column from character to date type.
+```{r}
+data$date <- as.Date(data$date, "%Y-%m-%d")
+```
+
+3. Remove missing data from the data so we can complete the tasks.
+```{r}
+clean_data <- na.omit(data)
+```
 
 ## What is mean total number of steps taken per day?
+1. Create the data for the histogram
+```{r}
+total_steps <- clean_data %>% 
+              group_by(date) %>%
+              summarise(sum = sum(steps))
+```
 
+2. Make the histogram without missing data with ggplot2
+```{r Histogram}
+ggplot(total_steps, aes(sum)) +
+    geom_histogram(color=4, fill="White", bins = 30) +
+    xlab("Number steps per day") +
+    ylab("Frequency") +
+    ggtitle("Total steps per day") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
 
+3. Calculate mean of the steps per day
+```{r}
+mean_steps_day <- mean(total_steps$sum)
+mean_steps_day
+```
 
-## What is the average daily activity pattern?
+4. Calculate median steps per day
+```{r}
+median_steps_day <- median(total_steps$sum)
+median_steps_day
+```
 
+## What is mean total number of steps taken per day?
+1. Preparing data for the plot
+```{r}
+mean_steps <- clean_data %>% 
+    group_by(interval) %>%
+    summarise(mean = mean(steps))
+```
 
+2. Plotting average daily pattern
+```{r}
+ggplot(mean_steps, aes(interval, mean)) +
+                    geom_line(col="blue") +
+                    xlab("5 minutes interval") +
+                    ylab("Average number of steps taken by day") +
+                    ggtitle("The average daily activity pattern")
+```
 
-## Imputing missing values
+3. Maximum 5-minute interval number of mean steps
+```{r}
+max_five_min <- mean_steps$interval[which.max(mean_steps$mean)]
+max_five_min
+```
 
+## Inputting missing values
+Now i´m going to redo the operations but with the missing data with the value of zero.  First i need to know how many missing values exist.
+```{r}
+sum_nas <- sum(is.na(data))
+sum_nas
+```
 
+1. Replace missing values with zero.
+```{r}
+datav2 <- data
+nas_num <- is.na(datav2$steps)
+datav2$steps[nas_num] <- 0
+```
+
+2. Preparing data for histogram
+```{r}
+total_stepsv2 <- datav2 %>% 
+    group_by(date) %>%
+    summarise(sum = sum(steps))
+```
+
+3. Making the histogram
+```{r}
+ggplot(total_stepsv2, aes(sum)) +
+    geom_histogram(color=4, fill="White", bins=30) +
+    xlab("Number steps per day") +
+    ylab("Frequency") +
+    ggtitle("Total steps per day")
+```
+
+4. Calculate mean of the steps per day
+```{r}
+mean_steps_dayv2 <- mean(total_stepsv2$sum)
+mean_steps_dayv2
+```
+
+5. Calculate median steps per day
+```{r}
+median_steps_dayv2 <- median(total_stepsv2$sum)
+median_steps_dayv2
+```
+
+6. Comparing the first value without missing values and the second value with the missing values replaced by zero. Our new mean dropped to 9354 steps as well as our median shifted to 10395 steps
+```{r}
+summary(total_steps)
+summary(total_stepsv2)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+1. Create new column so we can distinguish weekday from weekend.
+```{r}
+datav2$weekday <- sapply(datav2$date, function(x){
+    if(weekdays(x) == "Saturday" | weekdays(x)=="Sunday"){
+        weekday <- "weekend"
+    } else {
+        weekday <- "weekday"
+    }
+})
+```
+
+2. Calculate average steps by interval and weekday
+```{r}
+mean_steps_weekday <- datav2 %>% 
+    group_by(interval, weekday) %>%
+    summarise(mean = mean(steps))
+```
+
+ 3 Plotting the data
+```{r}
+ggplot(mean_steps_weekday, aes(interval, mean, color = weekday)) +
+    geom_line() +
+    facet_grid(weekday ~ .) +
+    xlab("5 minutes interval") +
+    ylab("Average number of steps") +
+    ggtitle("Activity pattern by weekday")
+```
